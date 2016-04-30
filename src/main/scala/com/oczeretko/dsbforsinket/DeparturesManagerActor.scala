@@ -11,7 +11,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class DeparturesManagerActor extends Actor with ActorLogging {
 
   def shouldRun(dateTime: LocalDateTime): Boolean =
-    dateTime.getDayOfWeek != DayOfWeek.SATURDAY && dateTime.getDayOfWeek != DayOfWeek.SUNDAY
+    // dateTime.getDayOfWeek != DayOfWeek.SATURDAY && dateTime.getDayOfWeek != DayOfWeek.SUNDAY
+  true
 
   def receive: Receive = {
     case Message.FindSubscribers => {

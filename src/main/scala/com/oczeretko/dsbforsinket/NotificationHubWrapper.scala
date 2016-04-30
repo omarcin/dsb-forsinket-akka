@@ -4,13 +4,18 @@ import com.windowsazure.messaging.{CollectionResult, NotificationHub, Registrati
 
 import scala.concurrent.{Future, Promise}
 import ImplicitConversions._
+import com.typesafe.config.ConfigFactory
+
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object NotificationHubWrapper {
 
-  def default: NotificationHub = {
-    new NotificationHub("", "")
+  lazy val default: NotificationHub = {
+    val config = ConfigFactory.load("secrets")
+    val connectionString = config.getString("secrets.notificationHub.connectionString")
+    val hubName = config.getString("secrets.notificationHub.name")
+    new NotificationHub(connectionString, hubName)
   }
 
   def getRegistrationsByTagAsync(tag: String): Future[List[Registration]] = {
