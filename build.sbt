@@ -7,7 +7,9 @@ version := "1.0"
 scalaVersion := "2.11.7"
 
 libraryDependencies ++= Seq(
-  "com.typesafe.akka" %% "akka-actor" % "2.4.4"
+  "com.typesafe.akka" %% "akka-actor" % "2.4.4",
+  "com.squareup.retrofit2" % "retrofit" % "2.0.2",
+  "com.squareup.retrofit2" % "converter-gson" % "2.0.2"
 )
 
 mappings in Universal ++= {

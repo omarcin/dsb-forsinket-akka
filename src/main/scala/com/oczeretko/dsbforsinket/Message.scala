@@ -7,4 +7,7 @@ object Message {
   case object FindSubscribers
 
   case class CheckForDelay(messageTag : String, station: String, time : String, isTest : Boolean)
+
+  case class Notify(messageTag: String, data: Map[String, String])
+
 }

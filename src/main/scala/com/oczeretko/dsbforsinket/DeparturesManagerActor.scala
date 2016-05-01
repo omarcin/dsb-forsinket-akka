@@ -11,6 +11,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class DeparturesManagerActor extends Actor with ActorLogging {
 
   def shouldRun(dateTime: LocalDateTime): Boolean =
+    // TODO: temporary
     // dateTime.getDayOfWeek != DayOfWeek.SATURDAY && dateTime.getDayOfWeek != DayOfWeek.SUNDAY
   true
 
