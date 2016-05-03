@@ -3,17 +3,21 @@ package com.oczeretko.dsbforsinket
 import java.time.{DayOfWeek, LocalDateTime, ZoneId}
 
 import akka.actor.{Actor, ActorLogging, Props}
-import com.oczeretko.dsbforsinket.Message.CheckForDelay
+import akka.pattern.ask
+import akka.util.Timeout
 
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
+import scala.language.postfixOps
 
 class DeparturesManagerActor extends Actor with ActorLogging {
 
+  implicit val executionContext = context.dispatcher
+  implicit val timeout: Timeout = 60 seconds
+  val departuresActor = context.actorOf(Props[DeparturesCheckActor])
+  val notificationActor = context.actorOf(Props[NotificationActor])
+
   def shouldRun(dateTime: LocalDateTime): Boolean =
-    // TODO: temporary
-    // dateTime.getDayOfWeek != DayOfWeek.SATURDAY && dateTime.getDayOfWeek != DayOfWeek.SUNDAY
-  true
+    dateTime.getDayOfWeek != DayOfWeek.SATURDAY && dateTime.getDayOfWeek != DayOfWeek.SUNDAY
 
   def receive: Receive = {
     case Message.FindSubscribers => {
@@ -22,63 +26,38 @@ class DeparturesManagerActor extends Actor with ActorLogging {
 
       if (shouldRun(cphTime)) {
 
-
         val minutesRounded = (cphTime.getMinute / 15) * 15
-        val timeTag = f"${Tags.timeTagPrefix}%s${cphTime.getHour}%s:$minutesRounded%02d"
+        val timeTag = f"${Tags.timeTagPrefix}%s${cphTime.getHour}%02d:$minutesRounded%02d"
         val timeTagNoPrefix = f"${cphTime.getHour}%s:$minutesRounded%02d"
 
         log.info(s"$timeTag : FindSubscribers")
-        val stationsFuture = stationsForTimeTag(timeTag)
+        val response = (notificationActor ? Message.GetRegistrationTagsForTag(timeTag)).mapTo[Message.RegistrationTagsForTag]
 
-        stationsFuture onSuccess {
-          case Seq() => {
+        response onSuccess {
+          case Message.RegistrationTagsForTag(_, Seq()) => {
             log.info(s"$timeTag No subscriptions")
           }
-          case stations => {
-
-            val checker = context.actorOf(Props[DeparturesCheckActor])
+          case Message.RegistrationTagsForTag(timeTagNoPrefix, registrations) => {
 
             for {
-              station <- stations
-              messageTag = s"$station-$timeTagNoPrefix"
-              msg = CheckForDelay(messageTag, station, timeTagNoPrefix, isTest = false)
+              registration <- registrations
+              msg = Message.CheckForDelay(registration, isTest = false)
             } yield {
-              log.info(s"$timeTag subscription for $station")
-              checker ! msg
+              log.info(s"$timeTag subscription for $registration")
+              departuresActor ! msg
             }
           }
         }
 
-        stationsFuture onFailure {
+        response onFailure {
           case error => {
-            log.error(error, s"$timeTag Failed to schedule work")
+            log.error(error, s"$timeTag Failed to get registrations")
           }
         }
       } else {
         log.info("Skipping because shouldRun returned false")
       }
     }
-  }
-
-  def stationsForTimeTag(timeTag: String): Future[Seq[String]] = {
-    import scala.collection.JavaConversions._
-
-    val buckets = Tags.bucketsFromTag(timeTag)
-    val registrationsFutures = buckets.map(NotificationHubWrapper.getRegistrationsByTagAsync)
-    val registrationListsFuture = collectResults(registrationsFutures)
-
-    registrationListsFuture.map(seq => {
-      val registrations = seq.flatten
-      val tags = registrations.flatMap(r => r.getTags.toIterable)
-      val tagsStationDistinct = tags.filter(_.startsWith(Tags.stationTagPrefix)).distinct
-      val tagsNoPrefix = tagsStationDistinct.map(_.substring(Tags.stationTagPrefix.length))
-      tagsNoPrefix
-    })
-  }
-
-  def collectResults[T](futures: Seq[Future[T]]): Future[Seq[T]] = {
-    val noFails = futures.map(f => f.map(Some(_)).recover({ case e => None }))
-    Future.sequence(noFails).map(seq => seq.flatten)
   }
 }
 

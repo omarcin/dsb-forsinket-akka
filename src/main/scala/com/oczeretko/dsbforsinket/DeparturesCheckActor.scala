@@ -2,50 +2,58 @@ package com.oczeretko.dsbforsinket
 
 import java.util.NoSuchElementException
 
-import akka.actor.{Actor, ActorLogging, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.language.postfixOps
 
 class DeparturesCheckActor extends Actor with ActorLogging {
+
+  implicit val executionContext = context.dispatcher
+  val pushNotificationActor: ActorRef = context.actorOf(Props[NotificationActor])
 
   def receive = {
     case msg: Message.CheckForDelay => {
       log.info(s"Received $msg")
 
-      val delayedDeparturesFuture = RejseplannenApi.getDelayedDepartures(msg.station);
-      val dataFuture =
+      val delayedDeparturesFuture = RejseplannenApi.getDelayedDepartures(msg.registration.station);
+      val messageFuture =
         for {
           delayedDepartures <- delayedDeparturesFuture
           _ = log.info(s"Delayed departures: ${delayedDepartures.length}.")
+
           if delayedDepartures.nonEmpty
-          _ = log.info(s"Preparing push message to tag: ${msg.messageTag}.")
+          _ = log.info(s"Preparing push message to tag: ${msg.registration.messageTag}.")
+
           mapWithCount = Map[String, String]("delayedCount" -> delayedDepartures.length.toString)
           firstFive = delayedDepartures.take(5)
-          data = firstFive.foldLeft((0, mapWithCount)) {
-            case ((index, map), departure) => {
-              val updatedMap = map ++ Map[String, String](
-                s"departureName$index" -> s"${departure.getName} <i>${departure.getDirection}</i>",
-                s"departureTime$index" -> departure.getTime,
-                s"departureDelay$index" -> departure.getUpdatedTime
-              )
-              (index, updatedMap)
-            }
-          }
-        } yield data._2
+          data = mapWithCount ++ toNotificationData(firstFive)
+        } yield Message.Notify(msg.registration.messageTag, data)
 
-      dataFuture onSuccess {
-        case data => context.actorOf(Props[PushNotificationActor]) ! Message.Notify(msg.messageTag, data)
+      messageFuture onSuccess {
+        case message => pushNotificationActor ! message
       }
 
-      dataFuture onFailure {
-        case e : NoSuchElementException => log.info("No delayed departures")
+      messageFuture onFailure {
+        case e: NoSuchElementException => log.info("No delayed departures")
         case e => log.error(e, "Failed to get departure data")
       }
     }
   }
+
+  private def toNotificationData(departures: Iterable[Departure]) = {
+    val dataMap = Map[String, String]()
+    departures.foldLeft((0, dataMap)) {
+      case ((index, map), departure) => {
+
+        val updatedMap = map ++ Map[String, String](
+          s"departureName$index" -> departure.displayName,
+          s"departureTime$index" -> departure.time,
+          s"departureNewTime$index" -> departure.updatedTime.getOrElse(""),
+          s"departureCancelled$index" -> departure.isCancelled.toString
+        )
+
+        (index + 1, updatedMap)
+      }
+    }._2
+  }
 }
-
-
-
-
-

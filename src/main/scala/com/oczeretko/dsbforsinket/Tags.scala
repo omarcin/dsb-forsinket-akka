@@ -6,5 +6,5 @@ object Tags {
   val stationTagPrefix : String = "station-"
   val timeTagPrefix : String = "time-"
 
-  def bucketsFromTag (tag : String) : Seq[String] = Seq.range(0, buckets).map(num => s"$tag$num")
+  def bucketsFromTag (tag : String) : List[String] = List.range(0, buckets).map(num => s"$tag-$num")
 }

@@ -9,11 +9,11 @@ import scala.language.postfixOps
 
 class InitActor extends Actor with ActorLogging {
 
+  val manager = context.actorOf(Props[DeparturesManagerActor])
+
   def receive: Receive = {
     case Message.InitSystem => {
       log.info("Initializing")
-
-      val manager = context.actorOf(Props[DeparturesManagerActor])
 
       val minutesToRound = 5 - (LocalTime.now().getMinute + 1) % 5
       log.info(s"First schedule in $minutesToRound minutes")

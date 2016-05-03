@@ -8,13 +8,23 @@ import retrofit2.*;
 import retrofit2.http.*;
 
 public interface RejseplanenService {
-    @GET("departureBoard?id={stationId}&useBus=0&offsetTime=0&format=json")
-    Call<DepartureBoard> getDepartures(@Query("stationId") String stationId);
+    @GET("departureBoard?useBus=0&offsetTime=0&format=json")
+    Call<DepartureResult> getDepartures(@Query("id") String stationId);
+
+    class DepartureResult {
+        @SerializedName("DepartureBoard")
+        private DepartureBoard departureBoard;
+
+        public DepartureBoard getDepartureBoard() {
+            return departureBoard;
+        }
+    }
 
     class DepartureBoard {
-        @SerializedName("Departure") private List<Departure> departures;
+        @SerializedName("Departure")
+        private ArrayList<Departure> departures;
 
-        public List<Departure> getDepartures() {
+        public ArrayList<Departure> getDepartures() {
             return departures;
         }
     }
@@ -27,9 +37,14 @@ public interface RejseplanenService {
         private String date;
         private String messages;
         private String track;
-        @SerializedName("rtTime") private String updatedTime;
-        @SerializedName("rtDate") private String updatedDate;
-        @SerializedName("rtTrack") private String updatedTrack;
+        @SerializedName("rtTime")
+        private String updatedTime;
+        @SerializedName("rtDate")
+        private String updatedDate;
+        @SerializedName("rtTrack")
+        private String updatedTrack;
+        private boolean cancelled;
+        private String state;
         private String finalStop;
         private String direction;
 
@@ -79,6 +94,14 @@ public interface RejseplanenService {
 
         public String getDirection() {
             return direction;
+        }
+
+        public boolean isCancelled() {
+            return cancelled;
+        }
+
+        public String getState() {
+            return state;
         }
     }
 }
