@@ -15,19 +15,22 @@ class DeparturesCheckActor extends Actor with ActorLogging {
     case msg: Message.CheckForDelay => {
       log.info(s"Received $msg")
 
-      val delayedDeparturesFuture = RejseplannenApi.getDelayedDepartures(msg.registration.station);
+      val delayedDeparturesFuture = RejseplannenApi.getDelayedDepartures(msg.tag.station);
       val messageFuture =
         for {
           delayedDepartures <- delayedDeparturesFuture
           _ = log.info(s"Delayed departures: ${delayedDepartures.length}.")
+          _ = for {
+            unrecognized <- delayedDepartures.filter(_.isInstanceOf[GenericDeparture])
+          } log.info(s"Could not match departure $unrecognized")
 
           if delayedDepartures.nonEmpty
-          _ = log.info(s"Preparing push message to tag: ${msg.registration.messageTag}.")
+          _ = log.info(s"Preparing push message to tag: ${msg.tag.messageTag}.")
 
           mapWithCount = Map[String, String]("delayedCount" -> delayedDepartures.length.toString)
           firstFive = delayedDepartures.take(5)
           data = mapWithCount ++ toNotificationData(firstFive)
-        } yield Message.Notify(msg.registration.messageTag, data)
+        } yield Message.Notify(msg.tag.messageTag, data)
 
       messageFuture onSuccess {
         case message => pushNotificationActor ! message

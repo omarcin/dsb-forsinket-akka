@@ -9,7 +9,6 @@ import com.windowsazure.messaging.{CollectionResult, Notification, NotificationH
 
 import scala.collection.JavaConversions._
 import scala.concurrent.{Future, Promise}
-import scala.util.{Failure, Success, Try}
 
 class NotificationActor extends Actor with ActorLogging {
 
@@ -36,9 +35,9 @@ class NotificationActor extends Actor with ActorLogging {
         case e => log.error(e, "Failed to send notification $msg")
       }
     }
-    case Message.GetRegistrationTagsForTag(tag) => {
+    case Message.GetRegistrationTagsForTag(timeTag) => {
       val originalSender = sender
-      val response = getRegistrationsTagsByTagAsync(tag).map(RegistrationTagsForTag(tag, _))
+      val response = getRegistrationsTagsByTimeTagAsync(timeTag).map(RegistrationTagsForTag(timeTag, _))
       response pipeTo originalSender
     }
   }
@@ -53,29 +52,31 @@ class NotificationActor extends Actor with ActorLogging {
     p.future.map(dummy => ())
   }
 
-  def getRegistrationsTagsByTagAsync(tag: String): Future[List[Registration]] = {
-    val buckets: List[String] = Tags.bucketsFromTag(tag)
-    val futureResults: List[Future[CollectionResult]] =
+  def getRegistrationsTagsByTimeTagAsync(timeTag: String): Future[List[RegistrationTag]] = {
+    import FutureEx._
+
+    val buckets: List[String] = Tags.bucketsFromTag(timeTag)
+    val futureResults: List[Future[List[NotificationTag]]] =
       buckets.map(bucketTag => {
         val p = Promise[CollectionResult]
         default.getRegistrationsByTagAsync(bucketTag, p)
-        p.future
+        p.future.map(tagsFromCollection)
       })
 
-    val futureTagsResults: List[Future[List[RegistrationTag]]] =
-      futureResults.map(futureResult => futureResult.map(tagsFromCollection))
+    val registrationTagsFutures : List[Future[List[RegistrationTag]]] =
+      futureResults.map(_.map(_.collect { case r: RegistrationTag => r }))
 
-    val futureRegistrationResults: List[Future[List[Registration]]]
-    = futureTagsResults.map(_.map(_.collect { case r : Registration => r }))
+    val registrationTagsSuccessfulFutures: Future[List[List[RegistrationTag]]] =
+      registrationTagsFutures.onlySuccessful
 
-    val futureRegistrationTries: Future[List[Try[List[Registration]]]] =
-      Future.sequence(futureRegistrationResults.map(future => future.map(Success(_)).recover { case e => Failure(e) }))
+    val allFetchedTags = registrationTagsSuccessfulFutures.map(_.flatten)
+    val tagsForTime = allFetchedTags.map(_.filter(_.time == timeTag))
 
-    futureRegistrationTries.map(_.collect { case Success(ts) => ts }.flatten.distinct)
+    tagsForTime
   }
 
-  private def tagsFromCollection(collectionResult: CollectionResult): List[RegistrationTag] = {
+  private def tagsFromCollection(collectionResult: CollectionResult): List[NotificationTag] = {
     val tagsLists: List[List[String]] = collectionResult.getRegistrations.toList.map(_.getTags.toList)
-    tagsLists.flatMap(_.map(RegistrationTag.apiTagToRegistrationTag))
+    tagsLists.flatMap(_.map(NotificationTag.apiTagToRegistrationTag))
   }
 }

@@ -6,11 +6,11 @@ object Message {
 
   case object FindSubscribers
 
-  case class CheckForDelay(registration: Registration, isTest : Boolean)
+  case class CheckForDelay(tag: RegistrationTag, isTest : Boolean)
 
   case class Notify(messageTag: String, data: Map[String, String])
 
   case class GetRegistrationTagsForTag(tag: String)
-  case class RegistrationTagsForTag(tag: String, registrationTags: List[Registration])
+  case class RegistrationTagsForTag(tag: String, registrationTags: List[RegistrationTag])
 
 }

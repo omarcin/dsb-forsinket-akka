@@ -35,7 +35,7 @@ object RejseplannenApi {
       case "TOG" | "REG" => RegionalTrainDeparture(di.getName, di.getTime, di.getDate, di.getMessages, di.getTrack, Option(di.getUpdatedTime), Option(di.getUpdatedDate), Option(di.getUpdatedTrack), di.getFinalStop, di.getDirection, di.isCancelled, Option(di.getState))
       case "M" => MetroDeparture(di.getName, di.getTime, di.getDate, di.getMessages, di.getTrack, Option(di.getUpdatedTime), Option(di.getUpdatedDate), Option(di.getUpdatedTrack), di.getFinalStop, di.getDirection, di.isCancelled, Option(di.getState))
       case "BUS" | "EXB" => BusDeparture(di.getName, di.getTime, di.getDate, di.getMessages, Option(di.getUpdatedTime), Option(di.getUpdatedDate), di.getFinalStop, di.getDirection, di.isCancelled, Option(di.getState))
-      case _ => GenericDeparture(di.getName, di.getTime, di.getDate, di.getMessages, Option(di.getUpdatedTime), Option(di.getUpdatedDate), di.getFinalStop, di.getDirection, di.isCancelled, Option(di.getState))
+      case _ => GenericDeparture(di.getType, di.getName, di.getTime, di.getDate, di.getMessages, Option(di.getUpdatedTime), Option(di.getUpdatedDate), di.getFinalStop, di.getDirection, di.isCancelled, Option(di.getState))
     }
 
 }
@@ -63,7 +63,7 @@ sealed trait Departure {
 
   def state: Option[String]
 
-  def displayName : String = direction
+  def displayName: String = direction
 }
 
 case class RegionalTrainDeparture(name: String,
@@ -90,9 +90,9 @@ case class STrainDeparture(name: String,
                            finalStop: String,
                            direction: String,
                            isCancelled: Boolean,
-                           state: Option[String]) extends Departure{
+                           state: Option[String]) extends Departure {
 
-  override def displayName : String =  s"$name <i>$direction</i>"
+  override def displayName: String = s"$name <i>$direction</i>"
 }
 
 case class MetroDeparture(name: String,
@@ -120,13 +120,14 @@ case class BusDeparture(name: String,
                         state: Option[String]) extends Departure
 
 
-case class GenericDeparture(name: String,
-                        time: String,
-                        date: String,
-                        messages: String,
-                        updatedTime: Option[String],
-                        updatedDate: Option[String],
-                        finalStop: String,
-                        direction: String,
-                        isCancelled: Boolean,
-                        state: Option[String]) extends Departure
+case class GenericDeparture(unknownType: String,
+                            name: String,
+                            time: String,
+                            date: String,
+                            messages: String,
+                            updatedTime: Option[String],
+                            updatedDate: Option[String],
+                            finalStop: String,
+                            direction: String,
+                            isCancelled: Boolean,
+                            state: Option[String]) extends Departure
