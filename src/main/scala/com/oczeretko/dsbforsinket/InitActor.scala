@@ -9,7 +9,7 @@ import scala.language.postfixOps
 
 class InitActor extends Actor with ActorLogging {
 
-  val manager = context.actorOf(Props[DeparturesManagerActor])
+  val manager = context.actorOf(Props[DeparturesManagerActor], "manager")
 
   def receive: Receive = {
     case Message.InitSystem => {

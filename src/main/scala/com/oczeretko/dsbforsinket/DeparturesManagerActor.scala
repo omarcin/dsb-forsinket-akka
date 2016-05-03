@@ -13,8 +13,8 @@ class DeparturesManagerActor extends Actor with ActorLogging {
 
   implicit val executionContext = context.dispatcher
   implicit val timeout: Timeout = 60 seconds
-  val departuresActor = context.actorOf(Props[DeparturesCheckActor])
-  val notificationActor = context.actorOf(Props[NotificationActor])
+  val departuresActor = context.actorOf(Props[DeparturesCheckActor], "departures")
+  val notificationActor = context.actorOf(Props[NotificationActor], "notification")
 
   def shouldRun(dateTime: LocalDateTime): Boolean =
     dateTime.getDayOfWeek != DayOfWeek.SATURDAY && dateTime.getDayOfWeek != DayOfWeek.SUNDAY

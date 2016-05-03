@@ -9,7 +9,7 @@ import scala.language.postfixOps
 class DeparturesCheckActor extends Actor with ActorLogging {
 
   implicit val executionContext = context.dispatcher
-  val pushNotificationActor: ActorRef = context.actorOf(Props[NotificationActor])
+  val pushNotificationActor: ActorRef = context.actorOf(Props[NotificationActor], "notification")
 
   def receive = {
     case msg: Message.CheckForDelay => {
