@@ -27,8 +27,7 @@ class DeparturesManagerActor extends Actor with ActorLogging {
       if (shouldRun(cphTime)) {
 
         val minutesRounded = (cphTime.getMinute / 15) * 15
-        val timeTag = f"${Tags.timeTagPrefix}%s${cphTime.getHour}%02d:$minutesRounded%02d"
-        val timeTagNoPrefix = f"${cphTime.getHour}%s:$minutesRounded%02d"
+        val timeTag = TimeTag(f"${cphTime.getHour}%s:$minutesRounded%02d")
 
         log.info(s"$timeTag : FindSubscribers")
         val response = (notificationActor ? Message.GetRegistrationTagsForTag(timeTag)).mapTo[Message.RegistrationTagsForTag]
@@ -37,7 +36,7 @@ class DeparturesManagerActor extends Actor with ActorLogging {
           case Message.RegistrationTagsForTag(_, Seq()) => {
             log.info(s"$timeTag No subscriptions")
           }
-          case Message.RegistrationTagsForTag(timeTagNoPrefix, registrations) => {
+          case Message.RegistrationTagsForTag(_, registrations) => {
 
             for {
               registration <- registrations

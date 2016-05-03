@@ -10,7 +10,7 @@ object Message {
 
   case class Notify(messageTag: String, data: Map[String, String])
 
-  case class GetRegistrationTagsForTag(tag: String)
-  case class RegistrationTagsForTag(tag: String, registrationTags: List[RegistrationTag])
+  case class GetRegistrationTagsForTag(tag: TimeTag)
+  case class RegistrationTagsForTag(tag: TimeTag, registrationTags: List[RegistrationTag])
 
 }

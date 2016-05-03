@@ -35,7 +35,8 @@ class NotificationActor extends Actor with ActorLogging {
         case e => log.error(e, "Failed to send notification $msg")
       }
     }
-    case Message.GetRegistrationTagsForTag(timeTag) => {
+    case msg @ Message.GetRegistrationTagsForTag(timeTag) => {
+      log.info(s"$msg.")
       val originalSender = sender
       val response = getRegistrationsTagsByTimeTagAsync(timeTag).map(RegistrationTagsForTag(timeTag, _))
       response pipeTo originalSender
@@ -52,10 +53,10 @@ class NotificationActor extends Actor with ActorLogging {
     p.future.map(dummy => ())
   }
 
-  def getRegistrationsTagsByTimeTagAsync(timeTag: String): Future[List[RegistrationTag]] = {
+  def getRegistrationsTagsByTimeTagAsync(timeTag: TimeTag): Future[List[RegistrationTag]] = {
     import FutureEx._
 
-    val buckets: List[String] = Tags.bucketsFromTag(timeTag)
+    val buckets: List[String] = Tags.bucketsFromTag(timeTag.messageTag)
     val futureResults: List[Future[List[NotificationTag]]] =
       buckets.map(bucketTag => {
         val p = Promise[CollectionResult]
@@ -70,7 +71,7 @@ class NotificationActor extends Actor with ActorLogging {
       registrationTagsFutures.onlySuccessful
 
     val allFetchedTags = registrationTagsSuccessfulFutures.map(_.flatten)
-    val tagsForTime = allFetchedTags.map(_.filter(_.time == timeTag))
+    val tagsForTime = allFetchedTags.map(_.filter(_.time == timeTag.time))
 
     tagsForTime
   }

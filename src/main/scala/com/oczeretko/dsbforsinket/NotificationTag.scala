@@ -12,12 +12,18 @@ object NotificationTag {
   }
 }
 
-sealed trait NotificationTag
+sealed trait NotificationTag {
+  def messageTag: String
+}
 
-case class TimeTag(time: String) extends NotificationTag
+case class TimeTag(time: String) extends NotificationTag {
+  override def messageTag: String = Tags.timeTagPrefix + time
+}
 
-case class StationTag(station: String) extends NotificationTag
+case class StationTag(station: String) extends NotificationTag {
+  override def messageTag: String = Tags.stationTagPrefix + station
+}
 
-case class RegistrationTag(station: String, time: String) extends NotificationTag{
+case class RegistrationTag(station: String, time: String) extends NotificationTag {
   def messageTag = s"$station-$time"
 }
