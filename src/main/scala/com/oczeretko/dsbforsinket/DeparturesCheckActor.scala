@@ -13,7 +13,7 @@ class DeparturesCheckActor extends Actor with ActorLogging {
 
   def receive = {
     case msg: Message.CheckForDelay => {
-      log.info(s"Received $msg")
+      log.debug(s"Received $msg")
 
       val delayedDeparturesFuture = RejseplannenApi.getDelayedDepartures(msg.tag.station);
       val messageFuture =
@@ -25,7 +25,7 @@ class DeparturesCheckActor extends Actor with ActorLogging {
           } log.info(s"Could not match departure $unrecognized")
 
           if delayedDepartures.nonEmpty
-          _ = log.info(s"Preparing push message to tag: ${msg.tag.messageTag}.")
+          _ = log.debug(s"Preparing push message to tag: ${msg.tag.messageTag}.")
 
           mapWithCount = Map[String, String]("delayedCount" -> delayedDepartures.length.toString)
           firstFive = delayedDepartures.take(5)

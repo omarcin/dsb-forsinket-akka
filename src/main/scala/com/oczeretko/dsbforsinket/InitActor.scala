@@ -15,7 +15,7 @@ class InitActor extends Actor with ActorLogging {
     case Message.InitSystem => {
       log.info("Initializing")
 
-      val minutesToRound = 5 - (LocalTime.now().getMinute + 1) % 5
+      val minutesToRound = 5 - LocalTime.now.getMinute % 5
       log.info(s"First schedule in $minutesToRound minutes")
 
       context.system.scheduler.schedule(

@@ -24,7 +24,7 @@ class NotificationActor extends Actor with ActorLogging {
   def receive: Receive = {
     case msg: Message.Notify => {
 
-      log.info(s"Sending ${msg}.")
+      log.debug(s"Sending ${msg}.")
       val future = sendGcmPushNotification(msg.messageTag, msg.data)
 
       future onSuccess {
@@ -36,7 +36,7 @@ class NotificationActor extends Actor with ActorLogging {
       }
     }
     case msg @ Message.GetRegistrationTagsForTag(timeTag) => {
-      log.info(s"$msg.")
+      log.debug(s"$msg.")
       val originalSender = sender
       val response = getRegistrationsTagsByTimeTagAsync(timeTag).map(RegistrationTagsForTag(timeTag, _))
       response pipeTo originalSender

@@ -21,15 +21,15 @@ class DeparturesManagerActor extends Actor with ActorLogging {
 
   def receive: Receive = {
     case Message.FindSubscribers => {
-      log.info("Received message: FindSubscribers")
+      log.debug("Received message: FindSubscribers")
       val cphTime = LocalDateTime.now(ZoneId.of("Europe/Copenhagen"))
 
       if (shouldRun(cphTime)) {
 
         val minutesRounded = (cphTime.getMinute / 15) * 15
-        val timeTag = TimeTag(f"${cphTime.getHour}%s:$minutesRounded%02d")
+        val timeTag = TimeTag(f"${cphTime.getHour}%02d:$minutesRounded%02d")
 
-        log.info(s"$timeTag : FindSubscribers")
+        log.debug(s"$timeTag : FindSubscribers")
         val response = (notificationActor ? Message.GetRegistrationTagsForTag(timeTag)).mapTo[Message.RegistrationTagsForTag]
 
         response onSuccess {
