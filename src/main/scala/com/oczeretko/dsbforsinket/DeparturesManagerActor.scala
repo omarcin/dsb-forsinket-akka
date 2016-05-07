@@ -4,6 +4,7 @@ import java.time.{DayOfWeek, LocalDateTime, ZoneId}
 
 import akka.actor.{Actor, ActorLogging, Props}
 import akka.pattern.ask
+import akka.routing.FromConfig
 import akka.util.Timeout
 
 import scala.concurrent.duration._
@@ -13,7 +14,7 @@ class DeparturesManagerActor extends Actor with ActorLogging {
 
   implicit val executionContext = context.dispatcher
   implicit val timeout: Timeout = 60 seconds
-  val departuresActor = context.actorOf(Props[DeparturesCheckActor], "departures")
+  val departuresRouterActor = context.actorOf(FromConfig.props(Props[DeparturesCheckActor]), "departuresRouter")
   val notificationActor = context.actorOf(Props[NotificationActor], "notification")
 
   def shouldRun(dateTime: LocalDateTime): Boolean =
@@ -43,7 +44,7 @@ class DeparturesManagerActor extends Actor with ActorLogging {
               msg = Message.CheckForDelay(registration, isTest = false)
             } yield {
               log.info(s"$timeTag subscription for $registration")
-              departuresActor ! msg
+              departuresRouterActor ! msg
             }
           }
         }
@@ -54,7 +55,7 @@ class DeparturesManagerActor extends Actor with ActorLogging {
           }
         }
       } else {
-        log.info("Skipping because shouldRun returned false")
+        log.debug("Skipping because shouldRun returned false")
       }
     }
   }
