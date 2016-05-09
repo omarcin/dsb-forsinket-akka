@@ -14,11 +14,13 @@ class DeparturesManagerActor extends Actor with ActorLogging {
 
   implicit val executionContext = context.dispatcher
   implicit val timeout: Timeout = 60 seconds
+
+  val settings = Settings(context.system)
   val departuresRouterActor = context.actorOf(FromConfig.props(Props[DeparturesCheckActor]), "departuresRouter")
   val notificationActor = context.actorOf(Props[NotificationActor], "notification")
 
   def shouldRun(dateTime: LocalDateTime): Boolean =
-    dateTime.getDayOfWeek != DayOfWeek.SATURDAY && dateTime.getDayOfWeek != DayOfWeek.SUNDAY
+    dateTime.getDayOfWeek != DayOfWeek.SATURDAY && dateTime.getDayOfWeek != DayOfWeek.SUNDAY || settings.runOnWeekend
 
   def receive: Receive = {
     case Message.FindSubscribers => {

@@ -4,8 +4,8 @@ import akka.actor.{Actor, ActorLogging}
 import akka.pattern.pipe
 import com.oczeretko.dsbforsinket.ImplicitConversions._
 import com.oczeretko.dsbforsinket.Message.RegistrationTagsForTag
-import com.typesafe.config.ConfigFactory
-import com.windowsazure.messaging.{CollectionResult, Notification, NotificationHub}
+import com.oczeretko.dsbforsinket.fake.FakeNotificationHub
+import com.windowsazure.messaging.{CollectionResult, INotificationHub, Notification, NotificationHub}
 
 import scala.collection.JavaConversions._
 import scala.concurrent.{Future, Promise}
@@ -13,13 +13,13 @@ import scala.concurrent.{Future, Promise}
 class NotificationActor extends Actor with ActorLogging {
 
   implicit val executionContext = context.dispatcher
+  val settings = Settings(context.system)
 
-  lazy val default: NotificationHub = {
-    val config = ConfigFactory.load("secrets")
-    val connectionString = config.getString("secrets.notificationHub.connectionString")
-    val hubName = config.getString("secrets.notificationHub.name")
-    new NotificationHub(connectionString, hubName)
-  }
+  lazy val default: INotificationHub =
+    if (settings.useFakeNotificationHub)
+      new FakeNotificationHub(settings.fakeNotificationHubBaseUrl)
+    else
+      new NotificationHub(settings.notificationHubConnectionString, settings.notificationHubName)
 
   def receive: Receive = {
     case msg: Message.Notify => {
@@ -28,14 +28,16 @@ class NotificationActor extends Actor with ActorLogging {
       val future = sendGcmPushNotification(msg.messageTag, msg.data)
 
       future onSuccess {
-        case _ => log.info(s"Notification sent $msg")
+        case _ =>
+          log.info(s"Notification sent")
+          log.debug(s"Notification sent $msg")
       }
 
       future onFailure {
         case e => log.error(e, "Failed to send notification $msg")
       }
     }
-    case msg @ Message.GetRegistrationTagsForTag(timeTag) => {
+    case msg@Message.GetRegistrationTagsForTag(timeTag) => {
       log.debug(s"$msg.")
       val originalSender = sender
       val response = getRegistrationsTagsByTimeTagAsync(timeTag).map(RegistrationTagsForTag(timeTag, _))
@@ -64,7 +66,7 @@ class NotificationActor extends Actor with ActorLogging {
         p.future.map(tagsFromCollection)
       })
 
-    val registrationTagsFutures : List[Future[List[RegistrationTag]]] =
+    val registrationTagsFutures: List[Future[List[RegistrationTag]]] =
       futureResults.map(_.map(_.collect { case r: RegistrationTag => r }))
 
     val registrationTagsSuccessfulFutures: Future[List[List[RegistrationTag]]] =
