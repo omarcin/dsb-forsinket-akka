@@ -15,7 +15,7 @@ object RejseplannenApi {
     new Retrofit.Builder()
       .baseUrl(BASE_URL)
       .addConverterFactory(GsonConverterFactory.create())
-      .build();
+      .build()
 
   lazy val service: RejseplanenService = retrofit.create(classOf[RejseplanenService]);
 
