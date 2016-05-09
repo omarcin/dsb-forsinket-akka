@@ -19,7 +19,7 @@ class DeparturesCheckActor extends Actor with ActorLogging {
       val messageFuture =
         for {
           delayedDepartures <- delayedDeparturesFuture
-          _ = log.info(s"Delayed departures: ${delayedDepartures.length}.")
+          _ = log.info(s"Delayed departures: ${msg.tag} ${delayedDepartures.length}.")
           _ = for {
             unrecognized <- delayedDepartures.filter(_.isInstanceOf[GenericDeparture])
           } log.info(s"Could not match departure $unrecognized")
