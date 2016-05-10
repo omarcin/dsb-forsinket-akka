@@ -59,23 +59,30 @@ class NotificationActor extends Actor with ActorLogging {
     import FutureEx._
 
     val buckets: List[String] = Tags.bucketsFromTag(timeTag.messageTag)
-    val futureResults: List[Future[List[NotificationTag]]] =
-      buckets.map(bucketTag => {
-        val p = Promise[CollectionResult]
-        default.getRegistrationsByTagAsync(bucketTag, p)
-        p.future.map(tagsFromCollection)
-      })
-
     val registrationTagsFutures: List[Future[List[RegistrationTag]]] =
-      futureResults.map(_.map(_.collect { case r: RegistrationTag => r }))
+      for {
+        bucketTag <- buckets
+        p = Promise[CollectionResult]
+        _ = default.getRegistrationsByTagAsync(bucketTag, p)
 
+        bucketResult = for {
+          collectionResult <- p.future
+          tags = tagsFromCollection(collectionResult)
+          registrations = tags.collect { case r: RegistrationTag => r }
+          registrationsForTime = registrations.filter(_.time == timeTag.time)
+          registrationsForTimeDistinct = registrationsForTime.distinct
+        } yield registrationsForTimeDistinct
+
+      } yield bucketResult
+
+    // TODO: error handling
     val registrationTagsSuccessfulFutures: Future[List[List[RegistrationTag]]] =
       registrationTagsFutures.onlySuccessful
 
     val allFetchedTags = registrationTagsSuccessfulFutures.map(_.flatten)
-    val tagsForTime = allFetchedTags.map(_.filter(_.time == timeTag.time))
+    val allFetchedTagsDistinct = allFetchedTags.map(_.distinct)
 
-    tagsForTime
+    allFetchedTagsDistinct
   }
 
   private def tagsFromCollection(collectionResult: CollectionResult): List[NotificationTag] = {
